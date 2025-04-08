@@ -20,6 +20,10 @@ pipeline {
         stage('Test') {
             steps {
                 script {
+                    // Clean up any existing test container first
+                    bat 'docker stop flask-test || echo "Container not running"'
+                    bat 'docker rm flask-test || echo "Container not found"'
+                    
                     // Start the container for testing
                     bat 'docker run -d --name flask-test -p 5001:5000 flask-app:%BUILD_ID%'
                     
@@ -27,7 +31,6 @@ pipeline {
                     bat 'ping -n 6 127.0.0.1 > nul'
                     
                     // Verify the application is running by making a request
-                    // Using PowerShell for better HTTP request handling
                     bat '''
                         powershell -command "try { $response = Invoke-WebRequest -Uri http://localhost:5001 -UseBasicParsing; if($response.StatusCode -eq 200) { exit 0 } else { exit 1 } } catch { exit 1 }"
                     '''
@@ -68,6 +71,10 @@ pipeline {
         }
         failure {
             echo 'Pipeline failed!'
+            
+            // Additional cleanup in case of failure
+            bat 'docker stop flask-test || echo "Container not running"'
+            bat 'docker rm flask-test || echo "Container not found"'
         }
     }
 }
